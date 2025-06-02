@@ -1,103 +1,225 @@
-import Image from "next/image";
+"use client";
+import { useDropzone } from "react-dropzone";
 
-export default function Home() {
+import type React from "react";
+
+import { useAtom, useAtomValue } from "jotai";
+import { pdfAtom, selectedPageAtom } from "./store/pdf";
+
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Label } from "@/components/ui/label";
+import { Slider } from "@/components/ui/slider";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import {
+  FileText,
+  PenTool,
+  ZoomIn,
+  ZoomOut,
+  RotateCcw,
+  ChevronDown,
+  AlertTriangle,
+  Check,
+  User,
+  Plus,
+  Upload,
+  Loader2,
+} from "lucide-react";
+import { Input } from "@/components/ui/input";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import InputPDF from "./components/input-pdf";
+import PreviewPDF from "./components/preview-pdf";
+import SignaturesGalery from "./components/signatures-galery";
+import { MergeAndDownloadButton } from "./components/pruebas";
+import { signaturesAtom } from "./store/signatures";
+import Configuration from "./components/configuration";
+import VisorPDF from "./components/visorPDF";
+import { BotonCreadorPDF } from "./components/boton-creador-pdf";
+
+export default function PDFSignerApp() {
+  const [selectedPage, setSelectedPage] = useAtom(selectedPageAtom);
+  const [selectedSignature, setSelectedSignature] = useState<number>(0);
+  const [advancedOpen, setAdvancedOpen] = useState(false);
+  const [zoom, setZoom] = useState(100);
+
+  const signatures2 = useAtomValue(signaturesAtom);
+
+  // Configuración de firmas por página
+  const [signatureConfig, setSignatureConfig] = useState({
+    first: {
+      configured: false,
+      positionX: [50],
+      positionY: [50],
+      scale: [100],
+      randomX: [0],
+      randomY: [0],
+      rotation: [0],
+      opacity: [100],
+    },
+    last: {
+      configured: true,
+      positionX: [75],
+      positionY: [25],
+      scale: [80],
+      randomX: [5],
+      randomY: [5],
+      rotation: [2],
+      opacity: [90],
+    },
+  });
+
+  const [signatures, setSignatures] = useState([
+    {
+      id: 1,
+      name: "Firma Principal",
+      url: "/placeholder.svg?height=60&width=120",
+    },
+    {
+      id: 2,
+      name: "Firma Alternativa",
+      url: "/placeholder.svg?height=60&width=120",
+    },
+    { id: 3, name: "Iniciales", url: "/placeholder.svg?height=60&width=120" },
+  ]);
+  const [pdfFile, setPdfFile] = useAtom(pdfAtom);
+  const [pdfUrl, setPdfUrl] = useState<string | null>(null);
+  const [isUploadingSignature, setIsUploadingSignature] = useState(false);
+  const [isUploadingPdf, setIsUploadingPdf] = useState(false);
+  const [newSignatureName, setNewSignatureName] = useState("");
+  const [showAddSignatureDialog, setShowAddSignatureDialog] = useState(false);
+
+  const currentConfig = signatureConfig[selectedPage];
+  const isConfigurationComplete =
+    signatureConfig.first.configured && signatureConfig.last.configured;
+
+  const updateConfig = (key: string, value: number[]) => {
+    setSignatureConfig((prev) => ({
+      ...prev,
+      [selectedPage]: {
+        ...prev[selectedPage],
+        [key]: value,
+        configured: true,
+      },
+    }));
+  };
+
+  const handleSignatureUpload = async (
+    event: React.ChangeEvent<HTMLInputElement>,
+  ) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    setIsUploadingSignature(true);
+
+    try {
+      // Simular carga de archivo
+      await new Promise((resolve) => setTimeout(resolve, 1500));
+
+      const url = URL.createObjectURL(file);
+      const fileName = file.name.replace(/\.[^/.]+$/, "");
+      const signatureName = newSignatureName.trim() || fileName;
+
+      const newSignature = {
+        id: Date.now(),
+        name: signatureName,
+        url: url,
+      };
+
+      setSignatures((prev) => [...prev, newSignature]);
+      setNewSignatureName("");
+      setShowAddSignatureDialog(false);
+    } catch (error) {
+      console.error("Error uploading signature:", error);
+    } finally {
+      setIsUploadingSignature(false);
+    }
+  };
+
+  const removeSignature = (id: number) => {
+    setSignatures((prev) => prev.filter((sig) => sig.id !== id));
+    if (selectedSignature >= signatures.length - 1) {
+      setSelectedSignature(Math.max(0, signatures.length - 2));
+    }
+  };
+
+  /// raaa
+  const { getRootProps, getInputProps, isDragActive } = useDropzone({
+    accept: { "application/pdf": [] },
+    multiple: false,
+    // onDrop: onFilesAccepted,
+  });
+
   return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm/6 text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-[family-name:var(--font-geist-mono)] font-semibold">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
-
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+    <div className="min-h-screen bg-gray-50">
+      {/* Header */}
+      <header className="sticky top-0 z-50 border-b border-gray-200 bg-white px-3 py-4">
+        <div className="max-w-items-center mx-auto flex justify-between">
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2">
+              <FileText className="h-8 w-8 text-blue-600" />
+              <h1 className="text-2xl font-bold text-gray-900">PDFSigner</h1>
+            </div>
+          </div>
+          <div className="flex items-center gap-4">
+            <Button variant="ghost" size="sm">
+              <User className="mr-2 h-4 w-4" />
+              Usuario
+            </Button>
+          </div>
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+      </header>
+      <div className="mx-auto max-w-7xl p-6">
+        <div className="grid h-[calc(100vh-120px)] grid-cols-1 gap-6 lg:grid-cols-2">
+          {/* Panel de Configuración */}
+          <div className="space-y-6 overflow-y-auto">
+            <div>
+              <h2 className="mb-2 text-3xl font-bold text-gray-900">
+                PDFSigner
+              </h2>
+              <p className="text-lg text-gray-600">
+                Modo Masivo - Configura las firmas para tu documento
+              </p>
+            </div>
+
+            {/* Galería de Firmas */}
+
+            <SignaturesGalery />
+
+            <Configuration />
+
+            {/* Botón Principal */}
+            {/* <Button
+              className="h-12 w-full text-lg"
+              disabled={!isConfigurationComplete}
+            >
+              <FileText className="mr-2 h-5 w-5" />
+              Generar PDF firmado
+            </Button> */}
+            <BotonCreadorPDF />
+          </div>
+
+          {/* Visor de PDF */}
+          <VisorPDF />
+        </div>
+      </div>
+      {/* <div>
+        {signatures2.length > 0 && (
+          <MergeAndDownloadButton selectedSignature={signatures2[0]} />
+        )}
+      </div> */}
     </div>
   );
 }
